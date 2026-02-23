@@ -6,8 +6,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
 
     # Application
-    PROJECT_NAME: str = "FastAPI Template"
-    PROJECT_VERSION: str = "1.0.2"
+    PROJECT_NAME: str = "CRM API"
+    PROJECT_VERSION: str = "0.0.1"
     DEBUG: bool = False
 
     # Database
