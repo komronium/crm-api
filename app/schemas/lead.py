@@ -10,6 +10,7 @@ class LeadBase(BaseModel):
 
 
 class LeadOut(LeadBase):
+    id: int
     status: str
     created_at: datetime
 
