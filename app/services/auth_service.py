@@ -37,7 +37,7 @@ class AuthService:
 
         await AuthService.update_last_login(user, db)
 
-        access_token = create_access_token({"sub": user.username})
+        access_token = create_access_token({"sub": str(user.id)})
         return Token(access_token=access_token)
 
     @staticmethod

@@ -27,7 +27,6 @@ async def get_current_user(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
     )
-
     payload = decode_access_token(token.credentials)
     if not payload:
         raise credentials_exception
