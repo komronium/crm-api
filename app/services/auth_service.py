@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException, status
-from pydantic import usernameStr
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
@@ -12,9 +11,7 @@ from app.schemas.auth import LoginRequest, SignupRequest, Token
 
 class AuthService:
     @staticmethod
-    async def authenticate(
-        db: Session, username: usernameStr, password: str
-    ) -> Optional[User]:
+    async def authenticate(db: Session, username: str, password: str) -> Optional[User]:
         user: Optional[User] = db.query(User).filter(User.username == username).first()
         if not user or not verify_password(password, user.password):
             return None
