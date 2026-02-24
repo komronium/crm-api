@@ -1,6 +1,7 @@
 from typing import List
-from sqlalchemy.orm import Session
+
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.models.user import User
@@ -8,14 +9,12 @@ from app.schemas.user import UserCreate, UserUpdate
 
 
 class UserService:
-
     @staticmethod
     def _get_user_or_404(db: Session, user_id: int) -> User:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail='User not found'
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
         return user
 
@@ -24,24 +23,29 @@ class UserService:
         return db.query(User).all()
 
     @staticmethod
+    async def get_all_operators(db: Session) -> List[User]:
+        return db.query(User).filter(User.is_admin == False).all()
+
+    @staticmethod
     async def create_user(user_data: UserCreate, db: Session) -> User:
-        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        existing_user = (
+            db.query(User).filter(User.username == user_data.username).first()
+        )
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Email already exists'
+                detail="Username already exists",
             )
 
         hashed_password = hash_password(user_data.password)
         user = User(
-            email=user_data.email,
-            password=hashed_password,
-            name=user_data.name
+            username=user_data.username, password=hashed_password, name=user_data.name
         )
-            
+
         db.add(user)
         db.commit()
         db.refresh(user)
+        return user
 
     @staticmethod
     async def get_user_by_id(user_id: int, db: Session) -> User:
@@ -57,7 +61,7 @@ class UserService:
         db.commit()
         db.refresh(db_user)
         return db_user
-    
+
     @staticmethod
     async def delete_user(db: Session, user_id: int) -> None:
         db_user = UserService._get_user_or_404(db, user_id)

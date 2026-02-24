@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserBase(BaseModel):
@@ -11,20 +11,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, max_length=128)
-
-    @field_validator("password", mode="before")
-    @classmethod
-    def validate_password(cls, value: str):
-        if not re.search(r"[A-Z]", value):
-            raise ValueError("Password must include at least one uppercase letter")
-        if not re.search(r"[a-z]", value):
-            raise ValueError("Password must include at least one lowercase letter")
-        if not re.search(r"\d", value):
-            raise ValueError("Password must include at least one digit")
-        if not re.search(r"[!@#$%^&*(),.?\':{}|<>]", value):
-            raise ValueError("Password must include at least one special character")
-        return value
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class UserUpdate(BaseModel):
