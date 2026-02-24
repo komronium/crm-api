@@ -38,7 +38,7 @@ class AuthService:
         await AuthService.update_last_login(user, db)
 
         access_token = create_access_token({"sub": str(user.id)})
-        return Token(access_token=access_token)
+        return Token(access_token=access_token, user=user)
 
     @staticmethod
     async def signup(db: Session, request: SignupRequest) -> User:
