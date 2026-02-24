@@ -9,6 +9,10 @@ class LeadBase(BaseModel):
     note: str | None = None
 
 
+class LeadCreate(LeadBase):
+    pass
+
+
 class LeadOut(LeadBase):
     id: int
     status: str

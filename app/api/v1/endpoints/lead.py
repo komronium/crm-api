@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.schemas.lead import DashboradOut, LeadOut
+from app.schemas.lead import DashboradOut, LeadCreate, LeadOut
 from app.services.lead_service import LeadService
 
 router = APIRouter(prefix="/api/v1/leads", tags=["Leads"], dependencies=[])
@@ -16,6 +16,19 @@ router = APIRouter(prefix="/api/v1/leads", tags=["Leads"], dependencies=[])
 )
 async def list_users(db: Session = Depends(get_db)) -> DashboradOut:
     return await LeadService.get_all_leads(db)
+
+
+@router.post(
+    "/",
+    response_model=LeadOut,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {"description": "Invalid credentials"},
+        401: {"description": "Unauthorized"},
+    },
+)
+async def create_operator(lead: LeadCreate, db: Session = Depends(get_db)) -> LeadOut:
+    return await LeadService.create_lead(db, lead)
 
 
 @router.patch("/{lead_id}/status", response_model=LeadOut)
