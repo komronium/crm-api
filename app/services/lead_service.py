@@ -30,7 +30,7 @@ class LeadService:
     @staticmethod
     async def create_lead(db: Session, lead_data: dict):
         # LeadBase orqali kelgan ma'lumotlar uchun
-        db_lead = Lead(**lead_data)
+        db_lead = Lead(name=lead_data.name, phone=lead_data.phone, note=lead_data.note)
         db.add(db_lead)
         db.commit()
         db.refresh(db_lead)
