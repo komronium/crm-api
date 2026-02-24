@@ -1,11 +1,12 @@
-from typing import Optional, Dict
 from datetime import datetime, timedelta
+from typing import Dict, Optional
+
+from jose import JWTError, jwt
 from passlib.context import CryptContext
-from jose import jwt, JWTError
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
@@ -19,12 +20,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict) -> str:
     payload = data.copy()
     expire = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload.update({'exp': expire})
-    
+    payload.update({"exp": expire})
+
     return jwt.encode(
-        payload,
-        settings.SECRET_KEY.get_secret_value(),
-        algorithm=settings.ALGORITHM
+        payload, settings.SECRET_KEY.get_secret_value(), algorithm=settings.ALGORITHM
     )
 
 
@@ -33,7 +32,7 @@ def decode_access_token(token: str) -> Optional[Dict]:
         return jwt.decode(
             token,
             settings.SECRET_KEY.get_secret_value(),
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.ALGORITHM],
         )
     except JWTError:
         return None

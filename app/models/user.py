@@ -1,9 +1,10 @@
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Boolean, Column, DateTime, String
+
 from app.db.base import Base
 
 
 class User(Base):
-    email = Column(String(length=128), unique=True, index=True, nullable=False)
+    username = Column(String(length=128), unique=True, index=True, nullable=False)
     name = Column(String(length=128), nullable=True)
     password = Column(String(length=64), nullable=False)
 
