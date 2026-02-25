@@ -27,7 +27,7 @@ class UserService:
         return (
             db.query(User)
             .filter(User.is_admin == False)
-            .order_by(User.last_login.desc())
+            .order_by(User.last_login)
             .all()
         )
 
