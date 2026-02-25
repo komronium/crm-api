@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.auth import LoginRequest, SignupRequest, Token
+from app.schemas.auth import ChangePassword, LoginRequest, Token
 
 
 class AuthService:
@@ -41,21 +41,14 @@ class AuthService:
         return Token(access_token=access_token, user=user)
 
     @staticmethod
-    async def signup(db: Session, request: SignupRequest) -> User:
-        existing_user: Optional[User] = (
-            db.query(User).filter(User.username == request.username).first()
-        )
-        if existing_user:
+    async def change_password(db: Session, user: User, request: ChangePassword):
+        if not verify_password(request.current_password, user.password):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="username already exists",
+                detail="Current password is incorrect",
             )
 
-        hashed_password = hash_password(request.password)
-        user: User = User(
-            username=request.username, password=hashed_password, name=request.name
-        )
+        user.password = hash_password(request.new_password)
         db.add(user)
         db.commit()
-        db.refresh(user)
-        return user
+        return {"message": "Password changed successfully"}

@@ -1,7 +1,4 @@
-import re
-from typing import Optional
-
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.user import UserOut
 
@@ -17,20 +14,19 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class SignupRequest(BaseModel):
-    name: Optional[str] = None
-    username: str
-    password: str = Field(..., min_length=1, max_length=128)
+class ChangePassword(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=1, max_length=128)
+    confirm_password: str = Field(..., min_length=1, max_length=128)
 
-    # @field_validator('password', mode='before')
-    # @classmethod
-    # def validate_password(cls, value: str):
-    #     if not re.search(r'[A-Z]', value):
-    #         raise ValueError('Password must include at least one uppercase letter')
-    #     if not re.search(r'[a-z]', value):
-    #         raise ValueError('Password must include at least one lowercase letter')
-    #     if not re.search(r'\d', value):
-    #         raise ValueError('Password must include at least one digit')
-    #     if not re.search(r'[!@#$%^&*(),.?\':{}|<>]', value):
-    #         raise ValueError('Password must include at least one special character')
-    #     return value
+    @model_validator(mode="after")
+    def validate_passwords(cls, values):
+        cur = values.current_password
+        new = values.new_password
+        conf = values.confirm_password
+
+        if new != conf:
+            raise ValueError("Yangi parol va tasdiqlash bir xil bo'lishi kerak.")
+        if cur == new:
+            raise ValueError("Yangi parol joriy parol bilan bir xil bo'lmasligi kerak.")
+        return values
