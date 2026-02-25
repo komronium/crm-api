@@ -20,7 +20,7 @@ class UserService:
 
     @staticmethod
     async def get_all_users(db: Session) -> List[User]:
-        return db.query(User).order_by(User.last_login.desc()).all()
+        return db.query(User).order_by(User.last_login).all()
 
     @staticmethod
     async def get_all_operators(db: Session) -> List[User]:
