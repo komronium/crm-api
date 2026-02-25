@@ -45,10 +45,10 @@ class AuthService:
         if not verify_password(request.current_password, user.password):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect",
+                detail="Jotiy parol xato",
             )
 
         user.password = hash_password(request.new_password)
         db.add(user)
         db.commit()
-        return {"message": "Password changed successfully"}
+        return {"message": "Parol muvaffaqiyatli o'zgartirildi"}

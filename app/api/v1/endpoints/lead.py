@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.schemas.lead import DashboradOut, LeadCreate, LeadOut
+from app.schemas.lead import (
+    DashboradOut,
+    LeadCreate,
+    LeadNoteCreate,
+    LeadNoteOut,
+    LeadOut,
+)
 from app.services.lead_service import LeadService
 
 router = APIRouter(prefix="/api/v1/leads", tags=["Leads"], dependencies=[])
@@ -51,3 +57,15 @@ async def update_status(
         )
 
     return updated_lead
+
+
+@router.post("/{lead_id}/notes/", response_model=LeadNoteOut)
+async def create_note(
+    lead_id: int, request: LeadNoteCreate, db: Session = Depends(get_db)
+) -> LeadNoteOut:
+    return await LeadService.create_note(db, lead_id, request)
+
+
+@router.delete("/notes/{note_id}/", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_note(note_id: int, db: Session = Depends(get_db)):
+    await LeadService.delete_note(db, note_id)

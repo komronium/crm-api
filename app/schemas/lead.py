@@ -16,6 +16,19 @@ class LeadCreate(LeadBase):
 class LeadOut(LeadBase):
     id: int
     status: str
+    notes: list["LeadNoteOut"]
+    created_at: datetime
+
+
+class LeadNoteBase(BaseModel):
+    text: str
+
+
+class LeadNoteCreate(LeadNoteBase): ...
+
+
+class LeadNoteOut(LeadNoteBase):
+    id: int
     created_at: datetime
 
 
@@ -29,3 +42,6 @@ class DashboradOut(BaseModel):
     contacted: DashboardItem
     negotiation: DashboardItem
     closed: DashboardItem
+
+
+DashboradOut.model_rebuild()

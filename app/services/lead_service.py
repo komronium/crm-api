@@ -1,6 +1,8 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.models.lead import Lead
+from app.models.lead import Lead, LeadNote
+from app.schemas.lead import LeadNoteCreate
 
 
 class LeadService:
@@ -50,6 +52,30 @@ class LeadService:
         db_lead = db.query(Lead).filter(Lead.id == lead_id).first()
         if db_lead:
             db.delete(db_lead)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    async def create_note(db: Session, lead_id: int, request: LeadNoteCreate):
+        lead = db.query(Lead).filter(Lead.id == lead_id).first()
+        if not lead:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Lead with id={lead_id} not found",
+            )
+
+        db_note = LeadNote(lead_id=lead_id, text=request.text)
+        db.add(db_note)
+        db.commit()
+        db.refresh(db_note)
+        return db_note
+
+    @staticmethod
+    async def delete_note(db: Session, note_id):
+        db_note = db.query(LeadNote).filter(LeadNote.id == note_id).first()
+        if db_note:
+            db.delete(db_note)
             db.commit()
             return True
         return False
