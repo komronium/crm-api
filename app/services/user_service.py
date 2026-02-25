@@ -24,7 +24,12 @@ class UserService:
 
     @staticmethod
     async def get_all_operators(db: Session) -> List[User]:
-        return db.query(User).filter(User.is_admin == False).all()
+        return (
+            db.query(User)
+            .filter(User.is_admin == False)
+            .order_by(User.last_login.desc())
+            .all()
+        )
 
     @staticmethod
     async def create_user(user_data: UserCreate, db: Session) -> User:
