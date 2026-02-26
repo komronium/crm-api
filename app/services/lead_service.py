@@ -8,7 +8,7 @@ from app.schemas.lead import LeadNoteCreate
 class LeadService:
     @staticmethod
     async def get_all_leads(db: Session):
-        all_leads = db.query(Lead).all()
+        all_leads = db.query(Lead).order_by(Lead.created_at.desc()).all()
 
         dashboard_data = {
             "new": {"count": 0, "leads": []},
