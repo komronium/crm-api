@@ -6,11 +6,10 @@ from pydantic import BaseModel, ConfigDict
 class LeadBase(BaseModel):
     name: str
     phone: str
-    note: str | None = None
 
 
 class LeadCreate(LeadBase):
-    pass
+    note: str | None = None
 
 
 class LeadOut(LeadBase):
