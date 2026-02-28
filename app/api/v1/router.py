@@ -15,7 +15,7 @@ VERIFY_TOKEN = "abc123"
 PAGE_ACCESS_TOKEN = ""
 
 
-@api_router.get("webhook/")
+@api_router.get("/webhook")
 async def verify_webhook(mode: str, verify_token: str, challenge: str):
     if verify_token == VERIFY_TOKEN:
         return int(challenge)
