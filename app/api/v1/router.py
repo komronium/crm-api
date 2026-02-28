@@ -15,28 +15,20 @@ VERIFY_TOKEN = "abc123"
 PAGE_ACCESS_TOKEN = ""
 
 
+VERIFY_TOKEN = "my_secure_token"
+
+
 @api_router.get("/webhook")
-async def verify_webhook(mode: str, verify_token: str, challenge: str):
-    if verify_token == VERIFY_TOKEN:
-        return int(challenge)
-    return "Verification failed"
+def verify(
+    hub_mode: str = None, hub_challenge: str = None, hub_verify_token: str = None
+):
+    if hub_verify_token == VERIFY_TOKEN:
+        return int(hub_challenge)
+    return "Invalid token"
 
 
 @api_router.post("/webhook")
-async def receive_lead(request: Request):
+async def receive(request: Request):
     data = await request.json()
-
-    lead_id = data["entry"][0]["changes"][0]["value"]["leadgen_id"]
-
-    # Lead ma'lumotini olish
-    url = f"https://graph.facebook.com/v18.0/{lead_id}"
-    params = {"access_token": PAGE_ACCESS_TOKEN}
-
-    response = requests.get(url, params=params)
-    lead_data = response.json()
-
-    print(lead_data)
-
-    # Bu yerda DB ga yozasiz
-
+    print(data)  # Shu yerga comment + DM keladi
     return {"status": "ok"}
