@@ -46,6 +46,7 @@ class LeadStatsOut(BaseModel):
     by_status: dict[str, int]
     last_7_days: list[LeadChartPoint]
     last_30_days: list[LeadChartPoint]
+    last_12_months: list[dict]
 
 
 class DashboardItem(BaseModel):

@@ -142,9 +142,41 @@ class LeadService:
                 cur = cur + timedelta(days=1)
             return out
 
+        def month_series(months: int) -> list[dict]:
+            now = datetime.now(timezone.utc)
+            first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            start = (first_of_this_month - timedelta(days=months * 31)).replace(day=1)
+
+            # Group by YYYY-MM in DB
+            rows = (
+                db.query(
+                    func.to_char(Lead.created_at, "YYYY-MM").label("m"),
+                    func.count(Lead.id),
+                )
+                .filter(Lead.created_at >= start)
+                .group_by(func.to_char(Lead.created_at, "YYYY-MM"))
+                .order_by(func.to_char(Lead.created_at, "YYYY-MM"))
+                .all()
+            )
+            by_month = {str(r[0]): int(r[1]) for r in rows if r[0]}
+
+            out: list[dict] = []
+            cur = first_of_this_month
+            keys: list[str] = []
+            for _ in range(months):
+                keys.append(cur.strftime("%Y-%m"))
+                # go back one month safely
+                prev = (cur - timedelta(days=1)).replace(day=1)
+                cur = prev
+            keys = list(reversed(keys))
+            for k in keys:
+                out.append({"month": k, "count": by_month.get(k, 0)})
+            return out
+
         return {
             "total": int(total),
             "by_status": by_status,
             "last_7_days": series(7),
             "last_30_days": series(30),
+            "last_12_months": month_series(12),
         }
