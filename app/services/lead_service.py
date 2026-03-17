@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.lead import Lead, LeadNote
-from app.schemas.lead import LeadCreate, LeadNoteCreate
+from app.schemas.lead import LeadCreate, LeadNoteCreate, LeadUpdate
 
 
 class LeadService:
@@ -51,6 +51,30 @@ class LeadService:
             db_lead.status = status
             db.commit()
             db.refresh(db_lead)
+        return db_lead
+
+    @staticmethod
+    async def update_lead(db: Session, lead_id: int, payload: LeadUpdate) -> Lead:
+        db_lead = db.query(Lead).filter(Lead.id == lead_id).first()
+        if not db_lead:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Lead with id={lead_id} not found",
+            )
+
+        if payload.name is None and payload.phone is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Nothing to update",
+            )
+
+        if payload.name is not None:
+            db_lead.name = payload.name
+        if payload.phone is not None:
+            db_lead.phone = payload.phone
+
+        db.commit()
+        db.refresh(db_lead)
         return db_lead
 
     @staticmethod

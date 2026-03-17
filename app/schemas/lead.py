@@ -12,6 +12,11 @@ class LeadCreate(LeadBase):
     note: str | None = None
 
 
+class LeadUpdate(BaseModel):
+    name: str | None = None
+    phone: str | None = None
+
+
 class LeadOut(LeadBase):
     id: int
     status: str

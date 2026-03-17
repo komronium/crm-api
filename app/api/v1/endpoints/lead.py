@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_admin_user, get_db
 from app.schemas.lead import (
     DashboradOut,
     LeadStatsOut,
     LeadCreate,
+    LeadUpdate,
     LeadNoteCreate,
     LeadNoteOut,
     LeadOut,
@@ -42,6 +43,32 @@ async def lead_stats(db: Session = Depends(get_db)) -> LeadStatsOut:
 )
 async def create_operator(lead: LeadCreate, db: Session = Depends(get_db)) -> LeadOut:
     return await LeadService.create_lead(db, lead)
+
+
+@router.patch(
+    "/{lead_id}",
+    response_model=LeadOut,
+    dependencies=[Depends(get_admin_user)],
+)
+async def update_lead(
+    lead_id: int, payload: LeadUpdate, db: Session = Depends(get_db)
+) -> LeadOut:
+    return await LeadService.update_lead(db, lead_id, payload)
+
+
+@router.delete(
+    "/{lead_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(get_admin_user)],
+)
+async def delete_lead(lead_id: int, db: Session = Depends(get_db)) -> Response:
+    ok = await LeadService.delete_lead(db, lead_id)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Lead with id={lead_id} not found",
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/{lead_id}/status", response_model=LeadOut)
