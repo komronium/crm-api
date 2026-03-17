@@ -1,8 +1,11 @@
+from datetime import date, datetime, timedelta, timezone
+
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.lead import Lead, LeadNote
-from app.schemas.lead import LeadNoteCreate
+from app.schemas.lead import LeadCreate, LeadNoteCreate
 
 
 class LeadService:
@@ -30,15 +33,15 @@ class LeadService:
         return dashboard_data
 
     @staticmethod
-    async def create_lead(db: Session, lead_data: dict):
-        # LeadBase orqali kelgan ma'lumotlar uchun
-        db_lead = Lead(name=lead_data.name, phone=lead_data.phone)
+    async def create_lead(db: Session, lead_data: LeadCreate):
+        db_lead = Lead(name=lead_data.name, phone=lead_data.phone, source="manual")
         db.add(db_lead)
         db.commit()
         db.refresh(db_lead)
-        await LeadService.create_note(
-            db, db_lead.id, LeadNoteCreate(text=lead_data.note)
-        )
+        if lead_data.note:
+            await LeadService.create_note(
+                db, db_lead.id, LeadNoteCreate(text=lead_data.note)
+            )
         return db_lead
 
     @staticmethod
@@ -82,3 +85,42 @@ class LeadService:
             db.commit()
             return True
         return False
+
+    @staticmethod
+    async def get_stats(db: Session):
+        total = db.query(func.count(Lead.id)).scalar() or 0
+
+        status_rows = (
+            db.query(Lead.status, func.count(Lead.id))
+            .group_by(Lead.status)
+            .all()
+        )
+        by_status = {str(k): int(v) for k, v in status_rows if k}
+
+        def series(days: int) -> list[dict]:
+            now = datetime.now(timezone.utc)
+            start = (now - timedelta(days=days - 1)).date()
+            end = now.date()
+
+            rows = (
+                db.query(func.date(Lead.created_at).label("d"), func.count(Lead.id))
+                .filter(Lead.created_at >= datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc))
+                .group_by(func.date(Lead.created_at))
+                .order_by(func.date(Lead.created_at))
+                .all()
+            )
+            by_day = {r[0]: int(r[1]) for r in rows if r[0]}
+
+            out: list[dict] = []
+            cur = start
+            while cur <= end:
+                out.append({"date": cur.isoformat(), "count": by_day.get(cur, 0)})
+                cur = cur + timedelta(days=1)
+            return out
+
+        return {
+            "total": int(total),
+            "by_status": by_status,
+            "last_7_days": series(7),
+            "last_30_days": series(30),
+        }

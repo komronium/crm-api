@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.schemas.lead import (
     DashboradOut,
+    LeadStatsOut,
     LeadCreate,
     LeadNoteCreate,
     LeadNoteOut,
@@ -22,6 +23,12 @@ router = APIRouter(prefix="/api/v1/leads", tags=["Leads"], dependencies=[])
 )
 async def list_users(db: Session = Depends(get_db)) -> DashboradOut:
     return await LeadService.get_all_leads(db)
+
+
+@router.get("/stats", response_model=LeadStatsOut)
+async def lead_stats(db: Session = Depends(get_db)) -> LeadStatsOut:
+    data = await LeadService.get_stats(db)
+    return LeadStatsOut(**data)
 
 
 @router.post(

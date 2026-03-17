@@ -31,6 +31,18 @@ class LeadNoteOut(LeadNoteBase):
     created_at: datetime
 
 
+class LeadChartPoint(BaseModel):
+    date: str  # YYYY-MM-DD
+    count: int
+
+
+class LeadStatsOut(BaseModel):
+    total: int
+    by_status: dict[str, int]
+    last_7_days: list[LeadChartPoint]
+    last_30_days: list[LeadChartPoint]
+
+
 class DashboardItem(BaseModel):
     count: int
     leads: list[LeadOut] = []
