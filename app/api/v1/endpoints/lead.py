@@ -48,7 +48,6 @@ async def create_operator(lead: LeadCreate, db: Session = Depends(get_db)) -> Le
 @router.patch(
     "/{lead_id}",
     response_model=LeadOut,
-    dependencies=[Depends(get_admin_user)],
 )
 async def update_lead(
     lead_id: int, payload: LeadUpdate, db: Session = Depends(get_db)
@@ -59,7 +58,6 @@ async def update_lead(
 @router.delete(
     "/{lead_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(get_admin_user)],
 )
 async def delete_lead(lead_id: int, db: Session = Depends(get_db)) -> Response:
     ok = await LeadService.delete_lead(db, lead_id)
