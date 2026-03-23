@@ -56,10 +56,10 @@ class DashboardItem(BaseModel):
 
 class DashboradOut(BaseModel):
     new: DashboardItem
+    low_quality: DashboardItem
     contacted: DashboardItem
     negotiation: DashboardItem
     closed: DashboardItem
-    low_quality: DashboardItem
-
+    
 
 DashboradOut.model_rebuild()
