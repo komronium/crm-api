@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_admin_user, get_db
@@ -22,8 +24,12 @@ router = APIRouter(prefix="/api/v1/leads", tags=["Leads"], dependencies=[])
     status_code=status.HTTP_200_OK,
     responses={401: {"description": "Unauthorized"}},
 )
-async def list_users(db: Session = Depends(get_db)) -> DashboradOut:
-    return await LeadService.get_all_leads(db)
+async def list_users(
+    db: Session = Depends(get_db),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+) -> DashboradOut:
+    return await LeadService.get_all_leads(db, date_from=date_from, date_to=date_to)
 
 
 @router.get("/stats", response_model=LeadStatsOut)

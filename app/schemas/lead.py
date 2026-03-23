@@ -59,6 +59,7 @@ class DashboradOut(BaseModel):
     contacted: DashboardItem
     negotiation: DashboardItem
     closed: DashboardItem
+    low_quality: DashboardItem
 
 
 DashboradOut.model_rebuild()

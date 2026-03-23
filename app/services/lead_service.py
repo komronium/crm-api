@@ -10,18 +10,36 @@ from app.schemas.lead import LeadCreate, LeadNoteCreate, LeadUpdate
 
 class LeadService:
     @staticmethod
-    async def get_all_leads(db: Session):
-        all_leads = db.query(Lead).order_by(Lead.created_at.desc()).all()
+    async def get_all_leads(
+        db: Session,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ):
+        today = datetime.now(timezone.utc).date()
+        if date_from is None:
+            date_from = today - timedelta(days=6)
+        if date_to is None:
+            date_to = today
+
+        dt_from = datetime.combine(date_from, datetime.min.time(), tzinfo=timezone.utc)
+        dt_to = datetime.combine(date_to, datetime.max.time(), tzinfo=timezone.utc)
+
+        all_leads = (
+            db.query(Lead)
+            .filter(Lead.created_at >= dt_from, Lead.created_at <= dt_to)
+            .order_by(Lead.created_at.desc())
+            .all()
+        )
 
         dashboard_data = {
             "new": {"count": 0, "leads": []},
             "contacted": {"count": 0, "leads": []},
             "negotiation": {"count": 0, "leads": []},
             "closed": {"count": 0, "leads": []},
+            "low_quality": {"count": 0, "leads": []},
         }
 
         for lead in all_leads:
-            # Statusni aniqlash (Enum bo'lsa .value, aks holda o'zi)
             status_key = (
                 lead.status.value if hasattr(lead.status, "value") else lead.status
             )
