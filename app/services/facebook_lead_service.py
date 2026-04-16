@@ -113,9 +113,16 @@ class FacebookLeadService:
                 continue
 
             field_data = item.get("field_data") or []
-            name = _extract_field(field_data, "full_name", "name")
+            name = _extract_field(
+                field_data,
+                "full_name", "name",
+                "ismingiz?", "ismingiz",
+            )
             phone = _extract_field(
-                field_data, "phone_number", "phone", "mobile_phone", "phone_number_uz"
+                field_data,
+                "номер_телефона", "номер телефона",
+                "phone_number", "phone", "mobile_phone", "phone_number_uz",
+                "telefon_raqamingiz?", "telefon_raqamingiz",
             )
 
             if not name or not phone:

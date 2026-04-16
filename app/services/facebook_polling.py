@@ -27,34 +27,32 @@ async def facebook_lead_polling_loop() -> None:
 
     interval = max(int(settings.FACEBOOK_POLL_INTERVAL_SECONDS), 10)
     lookback = max(int(settings.FACEBOOK_POLL_LOOKBACK_SECONDS), 60)
-    limit_per_form = max(int(settings.FACEBOOK_IMPORT_LIMIT_PER_FORM), 1)
+    limit = max(int(settings.FACEBOOK_IMPORT_LIMIT_PER_FORM), 1)
 
     logger.info(
-        "Facebook polling enabled. page_id=%s interval=%ss lookback=%ss limit_per_form=%s",
+        "Facebook polling enabled. page_id=%s interval=%ss lookback=%ss limit=%s",
         settings.FACEBOOK_PAGE_ID,
         interval,
         lookback,
-        limit_per_form,
+        limit,
     )
 
     while True:
         since = _utc_now() - timedelta(seconds=lookback)
         db = SessionLocal()
         try:
-            result = await FacebookLeadService.import_leads_by_page(
+            result = await FacebookLeadService.import_leads(
                 db,
-                page_id=str(settings.FACEBOOK_PAGE_ID),
+                form_id=str(settings.FACEBOOK_PAGE_ID),
                 since=since,
-                limit_per_form=limit_per_form,
+                limit=limit,
             )
-            total = result.get("total") or {}
             logger.info(
-                "Facebook import done. forms=%s fetched=%s created=%s skipped=%s errors=%s",
-                total.get("forms"),
-                total.get("fetched"),
-                total.get("created"),
-                total.get("skipped"),
-                len(total.get("errors") or []),
+                "Facebook import done. fetched=%s created=%s skipped=%s errors=%s",
+                result.get("fetched"),
+                result.get("created"),
+                result.get("skipped"),
+                len(result.get("errors") or []),
             )
         except Exception:
             logger.exception("Facebook import failed")

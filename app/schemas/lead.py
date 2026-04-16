@@ -60,6 +60,6 @@ class DashboradOut(BaseModel):
     contacted: DashboardItem
     negotiation: DashboardItem
     closed: DashboardItem
-    
+
 
 DashboradOut.model_rebuild()

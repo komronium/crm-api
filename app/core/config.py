@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:8000"]
 
     # Facebook / Meta Graph API (Lead Ads import)
-    FACEBOOK_GRAPH_VERSION: str = "v21.0"
+    FACEBOOK_GRAPH_VERSION: str = "v25.0"
     FACEBOOK_ACCESS_TOKEN: SecretStr | None = None
     FACEBOOK_LEADGEN_FORM_ID: str | None = None
     FACEBOOK_WEBHOOK_VERIFY_TOKEN: SecretStr | None = None
