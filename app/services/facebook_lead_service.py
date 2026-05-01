@@ -14,6 +14,19 @@ def _graph_base_url() -> str:
     return f"https://graph.facebook.com/{version}"
 
 
+NAME_FIELDS = {"full_name", "name", "ismingiz?", "ismingiz"}
+PHONE_FIELDS = {
+    "номер_телефона",
+    "номер телефона",
+    "phone_number",
+    "phone",
+    "mobile_phone",
+    "phone_number_uz",
+    "telefon_raqamingiz?",
+    "telefon_raqamingiz",
+}
+
+
 def _extract_field(field_data: list[dict], *names: str) -> str | None:
     wanted = {n.lower() for n in names}
     for item in field_data or []:
@@ -23,6 +36,31 @@ def _extract_field(field_data: list[dict], *names: str) -> str | None:
             if values:
                 return str(values[0])
     return None
+
+
+def _humanize(text: str) -> str:
+    if not text:
+        return text
+    cleaned = text.replace("_", " ").strip()
+    return cleaned[:1].upper() + cleaned[1:] if cleaned else cleaned
+
+
+def _extract_form_qa(field_data: list[dict]) -> list[dict]:
+    """
+    Returns a list of {"question": str, "answer": str} extracted from the
+    Facebook lead's field_data, excluding the name/phone fields used for the
+    Lead's main columns.
+    """
+    skip = {n.lower() for n in NAME_FIELDS | PHONE_FIELDS}
+    qa: list[dict] = []
+    for item in field_data or []:
+        raw_name = (item.get("name") or "").strip()
+        if not raw_name or raw_name.lower() in skip:
+            continue
+        values = item.get("values") or []
+        answer = ", ".join(_humanize(str(v)) for v in values) if values else ""
+        qa.append({"question": _humanize(raw_name), "answer": answer})
+    return qa
 
 
 class FacebookLeadService:
@@ -113,17 +151,8 @@ class FacebookLeadService:
                 continue
 
             field_data = item.get("field_data") or []
-            name = _extract_field(
-                field_data,
-                "full_name", "name",
-                "ismingiz?", "ismingiz",
-            )
-            phone = _extract_field(
-                field_data,
-                "номер_телефона", "номер телефона",
-                "phone_number", "phone", "mobile_phone", "phone_number_uz",
-                "telefon_raqamingiz?", "telefon_raqamingiz",
-            )
+            name = _extract_field(field_data, *NAME_FIELDS)
+            phone = _extract_field(field_data, *PHONE_FIELDS)
 
             if not name or not phone:
                 errors.append(
@@ -134,6 +163,8 @@ class FacebookLeadService:
                 )
                 continue
 
+            form_data = _extract_form_qa(field_data)
+
             db_lead = Lead(
                 name=name,
                 phone=phone,
@@ -141,6 +172,7 @@ class FacebookLeadService:
                 source="facebook",
                 external_id=str(lead_id),
                 raw_payload=json.dumps(item, ensure_ascii=False),
+                form_data=form_data or None,
             )
             db.add(db_lead)
             created += 1

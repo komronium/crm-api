@@ -8,6 +8,11 @@ class LeadBase(BaseModel):
     phone: str
 
 
+class LeadFormField(BaseModel):
+    question: str
+    answer: str
+
+
 class LeadCreate(LeadBase):
     note: str | None = None
 
@@ -21,6 +26,7 @@ class LeadOut(LeadBase):
     id: int
     status: str
     notes: list["LeadNoteOut"]
+    form_data: list[LeadFormField] | None = None
     created_at: datetime
 
 
@@ -56,10 +62,12 @@ class DashboardItem(BaseModel):
 
 class DashboradOut(BaseModel):
     new: DashboardItem
+    callback: DashboardItem
     low_quality: DashboardItem
-    contacted: DashboardItem
-    negotiation: DashboardItem
-    closed: DashboardItem
+    thinking: DashboardItem
+    next_month: DashboardItem
+    intro_lesson: DashboardItem
+    sale: DashboardItem
 
 
 DashboradOut.model_rebuild()

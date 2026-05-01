@@ -33,10 +33,12 @@ class LeadService:
 
         dashboard_data = {
             "new": {"count": 0, "leads": []},
+            "callback": {"count": 0, "leads": []},
             "low_quality": {"count": 0, "leads": []},
-            "contacted": {"count": 0, "leads": []},
-            "negotiation": {"count": 0, "leads": []},
-            "closed": {"count": 0, "leads": []},
+            "thinking": {"count": 0, "leads": []},
+            "next_month": {"count": 0, "leads": []},
+            "intro_lesson": {"count": 0, "leads": []},
+            "sale": {"count": 0, "leads": []},
         }
 
         for lead in all_leads:

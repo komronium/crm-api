@@ -1,4 +1,5 @@
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -16,6 +17,8 @@ class Lead(Base):
     source = Column(String(length=32), nullable=False, default="manual")
     external_id = Column(String(length=128), nullable=True, unique=True, index=True)
     raw_payload = Column(Text, nullable=True)
+    # List of {"question": str, "answer": str} extracted from the lead form
+    form_data = Column(JSONB, nullable=True)
 
     notes = relationship(
         "LeadNote", back_populates="lead", cascade="all, delete-orphan"
