@@ -6,12 +6,15 @@ Create Date: 2026-05-01 17:00:00.000000
 
 """
 
+import json
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 from sqlalchemy.dialects.postgresql import JSONB
+
+from app.services.facebook_lead_service import _extract_form_qa
 
 
 # revision identifiers, used by Alembic.
@@ -41,6 +44,32 @@ def upgrade() -> None:
         op.execute(
             sa.text("UPDATE lead SET status = :new WHERE status = :old").bindparams(
                 old=old, new=new
+            )
+        )
+
+    rows = bind.execute(
+        sa.text(
+            "SELECT id, raw_payload FROM lead "
+            "WHERE form_data IS NULL AND raw_payload IS NOT NULL"
+        )
+    ).fetchall()
+
+    for row in rows:
+        lead_id, raw_payload = row[0], row[1]
+        try:
+            parsed = json.loads(raw_payload) if isinstance(raw_payload, str) else raw_payload
+        except (ValueError, TypeError):
+            continue
+
+        field_data = (parsed or {}).get("field_data") or []
+        qa = _extract_form_qa(field_data)
+        if not qa:
+            continue
+
+        bind.execute(
+            sa.text("UPDATE lead SET form_data = CAST(:qa AS JSONB) WHERE id = :id").bindparams(
+                qa=json.dumps(qa, ensure_ascii=False),
+                id=lead_id,
             )
         )
 
