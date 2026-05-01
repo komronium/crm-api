@@ -14,27 +14,36 @@ def _graph_base_url() -> str:
     return f"https://graph.facebook.com/{version}"
 
 
-NAME_FIELDS = {"full_name", "name", "ismingiz?", "ismingiz"}
-PHONE_FIELDS = {
-    "номер_телефона",
-    "номер телефона",
-    "phone_number",
+# Priority-ordered: the primary fields used for Lead.name / Lead.phone columns.
+# Earlier entries are preferred when extracting the main value.
+NAME_FIELDS = ("full_name", "name", "ismingiz?", "ismingiz")
+PHONE_FIELDS = (
     "phone",
+    "phone_number",
     "mobile_phone",
     "phone_number_uz",
+    "номер_телефона",
+    "номер телефона",
     "telefon_raqamingiz?",
     "telefon_raqamingiz",
-}
+)
+
+# Only the canonical fields are excluded from form_data Q&A; the localized
+# ismingiz?/telefon_raqamingiz fields are kept so they appear alongside the
+# rest of the form responses.
+FORM_DATA_SKIP = {"full_name", "name", "phone", "phone_number", "mobile_phone",
+                  "phone_number_uz", "номер_телефона", "номер телефона"}
 
 
 def _extract_field(field_data: list[dict], *names: str) -> str | None:
-    wanted = {n.lower() for n in names}
-    for item in field_data or []:
-        name = (item.get("name") or "").lower()
-        if name in wanted:
-            values = item.get("values") or []
-            if values:
-                return str(values[0])
+    by_name = {(item.get("name") or "").lower(): item for item in field_data or []}
+    for n in names:
+        item = by_name.get(n.lower())
+        if not item:
+            continue
+        values = item.get("values") or []
+        if values:
+            return str(values[0])
     return None
 
 
@@ -48,14 +57,13 @@ def _humanize(text: str) -> str:
 def _extract_form_qa(field_data: list[dict]) -> list[dict]:
     """
     Returns a list of {"question": str, "answer": str} extracted from the
-    Facebook lead's field_data, excluding the name/phone fields used for the
-    Lead's main columns.
+    Facebook lead's field_data, excluding the canonical name/phone fields
+    that populate the Lead's main columns.
     """
-    skip = {n.lower() for n in NAME_FIELDS | PHONE_FIELDS}
     qa: list[dict] = []
     for item in field_data or []:
         raw_name = (item.get("name") or "").strip()
-        if not raw_name or raw_name.lower() in skip:
+        if not raw_name or raw_name.lower() in FORM_DATA_SKIP:
             continue
         values = item.get("values") or []
         answer = ", ".join(_humanize(str(v)) for v in values) if values else ""
