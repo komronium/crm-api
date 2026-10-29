@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core import throttle
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
 from app.schemas.auth import ChangePassword, LoginRequest, Token
@@ -24,16 +25,24 @@ class AuthService:
         db.refresh(user)
 
     @staticmethod
-    async def login(db: Session, request: LoginRequest) -> Token:
+    async def login(db: Session, request: LoginRequest, client_ip: str = "unknown") -> Token:
+        key = f"{request.username.strip().lower()}|{client_ip}"
+        if throttle.is_locked(key):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Juda ko'p noto'g'ri urinish. Bir necha daqiqadan keyin qayta urinib ko'ring.",
+            )
         user: Optional[User] = await AuthService.authenticate(
             db, request.username, request.password
         )
-        if not user:
+        if not user or not user.is_active:
+            throttle.register_failure(key)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        throttle.reset(key)
 
         await AuthService.update_last_login(user, db)
 

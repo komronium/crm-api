@@ -1,9 +1,10 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.timeutils import day_end, day_start, local_date, local_today, months_back
 from app.models.lead import Lead, LeadNote
 from app.schemas.lead import LeadCreate, LeadNoteCreate, LeadUpdate
 
@@ -15,14 +16,14 @@ class LeadService:
         date_from: date | None = None,
         date_to: date | None = None,
     ):
-        today = datetime.now(timezone.utc).date()
+        today = local_today()
         if date_from is None:
             date_from = today - timedelta(days=6)
         if date_to is None:
             date_to = today
 
-        dt_from = datetime.combine(date_from, datetime.min.time(), tzinfo=timezone.utc)
-        dt_to = datetime.combine(date_to, datetime.max.time(), tzinfo=timezone.utc)
+        dt_from = day_start(date_from)
+        dt_to = day_end(date_to)
 
         all_leads = (
             db.query(Lead)
@@ -141,57 +142,32 @@ class LeadService:
         )
         by_status = {str(k): int(v) for k, v in status_rows if k}
 
-        def series(days: int) -> list[dict]:
-            now = datetime.now(timezone.utc)
-            start = (now - timedelta(days=days - 1)).date()
-            end = now.date()
+        today = local_today()
 
-            rows = (
-                db.query(func.date(Lead.created_at).label("d"), func.count(Lead.id))
-                .filter(Lead.created_at >= datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc))
-                .group_by(func.date(Lead.created_at))
-                .order_by(func.date(Lead.created_at))
-                .all()
-            )
-            by_day = {r[0]: int(r[1]) for r in rows if r[0]}
+        def series(days: int) -> list[dict]:
+            start = today - timedelta(days=days - 1)
+            rows = db.query(Lead.created_at).filter(Lead.created_at >= day_start(start)).all()
+            by_day: dict[date, int] = {}
+            for (created_at,) in rows:
+                day = local_date(created_at)
+                by_day[day] = by_day.get(day, 0) + 1
 
             out: list[dict] = []
             cur = start
-            while cur <= end:
+            while cur <= today:
                 out.append({"date": cur.isoformat(), "count": by_day.get(cur, 0)})
-                cur = cur + timedelta(days=1)
+                cur += timedelta(days=1)
             return out
 
         def month_series(months: int) -> list[dict]:
-            now = datetime.now(timezone.utc)
-            first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            start = (first_of_this_month - timedelta(days=months * 31)).replace(day=1)
-
-            # Group by YYYY-MM in DB
-            rows = (
-                db.query(
-                    func.to_char(Lead.created_at, "YYYY-MM").label("m"),
-                    func.count(Lead.id),
-                )
-                .filter(Lead.created_at >= start)
-                .group_by(func.to_char(Lead.created_at, "YYYY-MM"))
-                .order_by(func.to_char(Lead.created_at, "YYYY-MM"))
-                .all()
-            )
-            by_month = {str(r[0]): int(r[1]) for r in rows if r[0]}
-
-            out: list[dict] = []
-            cur = first_of_this_month
-            keys: list[str] = []
-            for _ in range(months):
-                keys.append(cur.strftime("%Y-%m"))
-                # go back one month safely
-                prev = (cur - timedelta(days=1)).replace(day=1)
-                cur = prev
-            keys = list(reversed(keys))
-            for k in keys:
-                out.append({"month": k, "count": by_month.get(k, 0)})
-            return out
+            keys = months_back(today.replace(day=1), months)
+            first = date(int(keys[0][:4]), int(keys[0][5:]), 1)
+            rows = db.query(Lead.created_at).filter(Lead.created_at >= day_start(first)).all()
+            by_month: dict[str, int] = {}
+            for (created_at,) in rows:
+                key = local_date(created_at).strftime("%Y-%m")
+                by_month[key] = by_month.get(key, 0) + 1
+            return [{"month": k, "count": by_month.get(k, 0)} for k in keys]
 
         return {
             "total": int(total),

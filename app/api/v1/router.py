@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Request
+import hmac
+
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi.responses import PlainTextResponse
 
 from app.api.v1.endpoints import auth, lead, operators, profile
 from app.core.config import settings
@@ -13,16 +16,24 @@ api_router.include_router(lead.router)
 
 @api_router.get("/webhook")
 def verify(
-    hub_mode: str = None, hub_challenge: str = None, hub_verify_token: str = None
+    hub_mode: str | None = Query(default=None, alias="hub.mode"),
+    hub_challenge: str | None = Query(default=None, alias="hub.challenge"),
+    hub_verify_token: str | None = Query(default=None, alias="hub.verify_token"),
 ):
     expected = (
         settings.FACEBOOK_WEBHOOK_VERIFY_TOKEN.get_secret_value()
         if settings.FACEBOOK_WEBHOOK_VERIFY_TOKEN
         else None
     )
-    if expected and hub_verify_token == expected:
-        return int(hub_challenge)
-    return "Invalid token"
+    if (
+        expected
+        and hub_mode == "subscribe"
+        and hub_challenge is not None
+        and hub_verify_token
+        and hmac.compare_digest(hub_verify_token, expected)
+    ):
+        return PlainTextResponse(hub_challenge)
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
 
 
 @api_router.post("/webhook")

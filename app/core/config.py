@@ -15,10 +15,15 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10
 
+    # Business timezone (dashboard days, stats): leads are counted by the local day, not by UTC
+    TIMEZONE: str = "Asia/Tashkent"
+
     # Authentication
     SECRET_KEY: SecretStr
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    LOGIN_MAX_ATTEMPTS: int = 5
+    LOGIN_LOCK_SECONDS: int = 900
 
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:8000"]

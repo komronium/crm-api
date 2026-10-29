@@ -44,4 +44,4 @@ async def create_operator(user: UserCreate, db: Session = Depends(get_db)) -> Us
     responses={401: {"description": "Unauthorized"}, 404: {"description": "Not found"}},
 )
 async def delete_oprator(user_id: int, db: Session = Depends(get_db)):
-    await UserService.delete_user(db, user_id)
+    await UserService.delete_operator(db, user_id)

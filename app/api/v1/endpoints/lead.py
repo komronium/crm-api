@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_admin_user, get_db
+from app.api.deps import get_current_user, get_db
 from app.schemas.lead import (
     DashboradOut,
     LeadStatsOut,
@@ -12,10 +12,14 @@ from app.schemas.lead import (
     LeadNoteCreate,
     LeadNoteOut,
     LeadOut,
+    LeadStatus,
 )
 from app.services.lead_service import LeadService
 
-router = APIRouter(prefix="/api/v1/leads", tags=["Leads"], dependencies=[])
+# Leads hold customers' names and phone numbers: every route needs a signed-in user.
+router = APIRouter(
+    prefix="/api/v1/leads", tags=["Leads"], dependencies=[Depends(get_current_user)]
+)
 
 
 @router.get(
@@ -78,14 +82,15 @@ async def delete_lead(lead_id: int, db: Session = Depends(get_db)) -> Response:
 @router.patch("/{lead_id}/status", response_model=LeadOut)
 async def update_status(
     lead_id: int,
-    status: str,  # Yoki Enum ishlatsangiz yanada xavfsizroq bo'ladi
+    new_status: LeadStatus = Query(..., alias="status"),
     db: Session = Depends(get_db),
 ):
     """
-    Lead statusini yangilash uchun endpoint.
+    Lead statusini yangilash uchun endpoint. Faqat ma'lum statuslar qabul qilinadi
+    (boshqa qiymat leadni boshqaruv panelidan yo'qotib qo'yardi).
     """
     updated_lead = await LeadService.update_lead_status(
-        db=db, lead_id=lead_id, status=status
+        db=db, lead_id=lead_id, status=new_status
     )
 
     if not updated_lead:
@@ -106,4 +111,8 @@ async def create_note(
 
 @router.delete("/notes/{note_id}/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_note(note_id: int, db: Session = Depends(get_db)):
-    await LeadService.delete_note(db, note_id)
+    if not await LeadService.delete_note(db, note_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Note with id={note_id} not found",
+        )

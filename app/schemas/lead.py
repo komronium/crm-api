@@ -1,11 +1,22 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+LeadStatus = Literal[
+    "new", "callback", "low_quality", "thinking", "next_month", "intro_lesson", "sale"
+]
+
+
+def _clean(value: str | None) -> str | None:
+    return value.strip() if isinstance(value, str) else value
 
 
 class LeadBase(BaseModel):
-    name: str
-    phone: str
+    name: str = Field(..., min_length=1, max_length=128)
+    phone: str = Field(..., min_length=3, max_length=32)
+
+    _strip = field_validator("name", "phone", mode="before")(_clean)
 
 
 class LeadFormField(BaseModel):
@@ -14,12 +25,14 @@ class LeadFormField(BaseModel):
 
 
 class LeadCreate(LeadBase):
-    note: str | None = None
+    note: str | None = Field(default=None, max_length=512)
 
 
 class LeadUpdate(BaseModel):
-    name: str | None = None
-    phone: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    phone: str | None = Field(default=None, min_length=3, max_length=32)
+
+    _strip = field_validator("name", "phone", mode="before")(_clean)
 
 
 class LeadOut(LeadBase):
@@ -31,7 +44,9 @@ class LeadOut(LeadBase):
 
 
 class LeadNoteBase(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1, max_length=512)
+
+    _strip = field_validator("text", mode="before")(_clean)
 
 
 class LeadNoteCreate(LeadNoteBase): ...

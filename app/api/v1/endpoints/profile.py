@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.user import User
@@ -56,4 +56,9 @@ async def delete_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> None:
+    if current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin hisobini o'chirib bo'lmaydi",
+        )
     await UserService.delete_user(db, current_user.id)

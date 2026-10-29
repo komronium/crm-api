@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -19,8 +19,14 @@ router = APIRouter(prefix="/api/v1", tags=["Authentication"])
         500: {"description": "Internal Server Error"},
     },
 )
-async def login(request: LoginRequest, db: Session = Depends(get_db)) -> Token:
-    return await AuthService.login(db, request)
+async def login(
+    request: LoginRequest, http_request: Request, db: Session = Depends(get_db)
+) -> Token:
+    # nginx sets X-Real-IP to the real client address (a client cannot forge it)
+    client_ip = http_request.headers.get("x-real-ip") or (
+        http_request.client.host if http_request.client else "unknown"
+    )
+    return await AuthService.login(db, request, client_ip)
 
 
 @router.post(

@@ -54,3 +54,21 @@ pip install -r requirements.txt
 # Run development server
 uvicorn app.main:app --reload
 ```
+
+## Tests
+
+```bash
+pip install -r requirements.txt
+python -m pytest -q tests
+```
+
+The tests run on SQLite (the Postgres `JSONB` column is mapped to `JSON` for them), so they need no database.
+
+## Notes for operators
+
+- Every `/api/v1/leads/*` route requires a signed-in user (Bearer token).
+- Login is locked for 15 minutes after 5 wrong passwords (per username and client address, in memory).
+- Dashboard days and statistics use the business timezone (`TIMEZONE`, default `Asia/Tashkent`), not UTC.
+- Facebook import: `FACEBOOK_LEADGEN_FORM_ID` is used when set, otherwise the value of `FACEBOOK_PAGE_ID` is used as the
+  form id. If the access token expires the log says so once every 30 minutes; create a new token (a system-user token
+  does not expire) and restart the service.

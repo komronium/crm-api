@@ -3,10 +3,14 @@ from datetime import datetime
 
 import httpx
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.lead import Lead
+
+
+MAX_PAGES = 5
 
 
 def _graph_base_url() -> str:
@@ -131,69 +135,79 @@ class FacebookLeadService:
 
         url = f"{_graph_base_url()}/{form_id}/leads"
 
-        async with httpx.AsyncClient(timeout=20) as client:
-            resp = await client.get(url, params=params)
-
-        if resp.status_code >= 400:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Facebook Graph error: {resp.status_code} {resp.text}",
-            )
-
-        payload = resp.json()
-        data = payload.get("data") or []
-
         created = 0
         skipped = 0
+        fetched = 0
         errors: list[dict] = []
+        paging = None
 
-        for item in data:
-            lead_id = item.get("id")
-            if not lead_id:
-                skipped += 1
-                continue
+        async with httpx.AsyncClient(timeout=20) as client:
+            # Follow "next" pages (up to MAX_PAGES), otherwise a burst larger than `limit` loses leads.
+            for _ in range(MAX_PAGES):
+                resp = await client.get(url, params=params)
+                if resp.status_code >= 400:
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=f"Facebook Graph error: {resp.status_code} {resp.text}",
+                    )
+                payload = resp.json()
+                data = payload.get("data") or []
+                paging = payload.get("paging")
+                fetched += len(data)
 
-            exists = db.query(Lead).filter(Lead.external_id == str(lead_id)).first()
-            if exists:
-                skipped += 1
-                continue
+                for item in data:
+                    result = FacebookLeadService._store_lead(db, item)
+                    if result == "created":
+                        created += 1
+                    elif result == "skipped":
+                        skipped += 1
+                    else:
+                        errors.append(result)
 
-            field_data = item.get("field_data") or []
-            name = _extract_field(field_data, *NAME_FIELDS)
-            phone = _extract_field(field_data, *PHONE_FIELDS)
-
-            if not name or not phone:
-                errors.append(
-                    {
-                        "external_id": str(lead_id),
-                        "reason": "missing_name_or_phone",
-                    }
-                )
-                continue
-
-            form_data = _extract_form_qa(field_data)
-
-            db_lead = Lead(
-                name=name,
-                phone=phone,
-                status="new",
-                source="facebook",
-                external_id=str(lead_id),
-                raw_payload=json.dumps(item, ensure_ascii=False),
-                form_data=form_data or None,
-            )
-            db.add(db_lead)
-            created += 1
-
-        db.commit()
+                next_url = (paging or {}).get("next")
+                if not next_url or not data:
+                    break
+                url, params = next_url, None
 
         return {
-            "fetched": len(data),
+            "fetched": fetched,
             "created": created,
             "skipped": skipped,
             "errors": errors,
-            "paging": payload.get("paging"),
+            "paging": paging,
         }
+
+    @staticmethod
+    def _store_lead(db: Session, item: dict):
+        """Save one Graph lead. Returns "created", "skipped" or an error dict. One bad lead never loses the others."""
+        lead_id = item.get("id")
+        if not lead_id:
+            return "skipped"
+        if db.query(Lead).filter(Lead.external_id == str(lead_id)).first():
+            return "skipped"
+
+        field_data = item.get("field_data") or []
+        name = _extract_field(field_data, *NAME_FIELDS)
+        phone = _extract_field(field_data, *PHONE_FIELDS)
+        if not name or not phone:
+            return {"external_id": str(lead_id), "reason": "missing_name_or_phone"}
+
+        db_lead = Lead(
+            name=name[:128],
+            phone=phone[:32],
+            status="new",
+            source="facebook",
+            external_id=str(lead_id),
+            raw_payload=json.dumps(item, ensure_ascii=False),
+            form_data=_extract_form_qa(field_data) or None,
+        )
+        db.add(db_lead)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            return "skipped"
+        return "created"
 
     @staticmethod
     async def import_leads_by_page(
