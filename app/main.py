@@ -29,7 +29,12 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION, lifespan=lifespan)
+# The interactive docs describe every route to anyone who opens them: only available while DEBUG is on.
+_docs = {} if settings.DEBUG else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+app = FastAPI(
+    title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION, lifespan=lifespan, **_docs
+)
 
 app.add_middleware(
     CORSMiddleware,

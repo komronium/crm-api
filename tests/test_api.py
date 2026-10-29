@@ -170,3 +170,8 @@ def test_polling_detects_an_expired_token():
     exc = HTTPException(502, 'Facebook Graph error: 400 {"error":{"message":"Error validating access token: Session has expired","code":190}}')
     assert _is_token_error(exc)
     assert not _is_token_error(HTTPException(502, "Facebook Graph error: 500 oops"))
+
+
+def test_api_docs_are_not_public_when_debug_is_off(client):
+    for url in ("/docs", "/redoc", "/openapi.json"):
+        assert client.get(url).status_code == 404
